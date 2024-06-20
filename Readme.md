@@ -60,7 +60,7 @@ Test results will be recorded in the "Test Result" column of the Excel file:
 - Ensure that the Excel file and Python script are in the same directory.
 - Please note that this tool uses Telnet, which is a protocol that does not encrypt data. Sending sensitive information over Telnet may be risky.
 ### Additional Information
-- Repository: https://support.google.com/webmasters/thread/176251023/outdated-content-removal-invalid-url?hl=en
+- Repository: https://github.com/niknew1996/diggy_stand_local
 - Python: https://www.python.org/
 
 If you have any questions or need further assistance, you can contact the developer through the GitHub repository.
