@@ -18,7 +18,12 @@ def main(file_name):
     wb = openpyxl.load_workbook(file_name) # Loadfile Excel
     ws = wb.active 
 
-    for row in ws.iter_rows(min_row=2):  # Skip Header Row
+    # รับค่า ssh_user และ ssh_password จากผู้ใช้
+    ssh_user = input("Enter SSH Username: ")
+    ssh_password = input("Enter SSH Password: ")
+    ssh_port = 22
+
+    for row in ws.iter_rows(min_row=3):  # Skip Header Row
         if all(cell.value is None for cell in row):
             print("Row is Null stop it")
             break
@@ -31,15 +36,9 @@ def main(file_name):
             row[10].value = "Invalid Port"
             continue
 
-        ssh_user, ssh_password = row[12].value, row[13].value
-        ssh_port = 22  # พอร์ต SSH ปกติ
-
-
-        all_success = True #ถ้ามี null ในตัวแปรจะ false ทันที
-        #แกะค่า source ip start กับ end ออกมา
+        all_success = True
         for source_ip in range(int(source_start.split('.')[-1]), int(source_end.split('.')[-1]) + 1):
             source_ip_full = source_start.rsplit('.', 1)[0] + '.' + str(source_ip)
-            #remote sshclient เข้า source ip start
 
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
