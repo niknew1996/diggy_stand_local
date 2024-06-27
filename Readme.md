@@ -15,12 +15,13 @@ Diggy Standalone is a tool designed to test network connectivity between a group
 1. Clone Repository:
 ```bash
 git clone https://github.com/niknew1996/diggy_stand_local.git
-cd diggy_stand_alone
+cd diggy_stand_local
 ```
 2. Install Python:
 - install python from this https://www.python.org/downloads/
 3. Create Virtual Environment:
-```bash
+```
+pip install virtualenv
 python -m venv myenv  # สร้าง virtual environment
 source myenv/Scripts/activate  # เปิดใช้งาน virtual environment
 ```
