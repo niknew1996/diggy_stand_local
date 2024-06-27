@@ -1,16 +1,17 @@
-import asyncio
 import paramiko
 import openpyxl
-from telnetlib3 import open_connection
 
-# ประกาศ Functions Telnet
-async def test_telnet(telnet_host, telnet_port, timeout=5):
+# ประกาศ Functions Telnet ผ่าน SSH
+def test_telnet_via_ssh(ssh_client, dest_ip, port, timeout=5):
     try:
-        reader, writer = await asyncio.wait_for(open_connection(telnet_host, port=telnet_port), timeout=timeout)
-        await asyncio.wait_for(reader.read(1), timeout=timeout)
-        writer.close()
-        return "Success"
-    except (asyncio.TimeoutError, Exception):
+        stdin, stdout, stderr = ssh_client.exec_command(f"telnet {dest_ip} {port}", timeout=timeout)
+        stdout.channel.settimeout(timeout)
+        if "Connected" in stdout.read().decode():
+            return "Success"
+        else:
+            return "Failed"
+    except Exception as e:
+        print(f"An error occurred during telnet: {e}")
         return "Failed"
 
 # ประกาศ Functions main
@@ -50,15 +51,15 @@ def main(file_name):
                 row[10].value = "SSH Failed"
                 all_success = False
                 break
-                #แกะค่า Destinations ip start กับ end ออกมา
+
+            # แกะค่า Destinations ip start กับ end ออกมา
             for dest_ip in range(int(dest_start.split('.')[-1]), int(dest_end.split('.')[-1]) + 1):
                 dest_ip_full = dest_start.rsplit('.', 1)[0] + '.' + str(dest_ip)
                 print(f"Testing telnet from {source_ip_full} to {dest_ip_full}:{port}")
-                result = asyncio.run(test_telnet(dest_ip_full, port)) #เริ่ม telnet
+                result = test_telnet_via_ssh(ssh_client, dest_ip_full, port) #เริ่ม telnet ผ่าน SSH
                 print(f"Testing telnet result: {result}")
                 if result == "Failed":
                     all_success = False #ถ้ามี failed 1 ตัว ก็ false หมดเลย
-              #  row[10].value = result #บันทึกลง Colum K
 
             ssh_client.close()
 
