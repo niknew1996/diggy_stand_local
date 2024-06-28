@@ -1,7 +1,8 @@
 import paramiko
 import openpyxl
+import ipaddress
 
-# ประกาศ Functions Telnet ผ่าน SSH
+# Function to test telnet connection via SSH
 def test_telnet_via_ssh(ssh_client, dest_ip, port, timeout=5):
     try:
         stdin, stdout, stderr = ssh_client.exec_command(f"telnet {dest_ip} {port}", timeout=timeout)
@@ -14,32 +15,58 @@ def test_telnet_via_ssh(ssh_client, dest_ip, port, timeout=5):
         print(f"An error occurred during telnet: {e}")
         return "Failed"
 
-# ประกาศ Functions main
+# Function to validate IP addresses
+def is_valid_ip(ip):
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError:
+        return False
+
+# Function to validate IP address range
+def is_valid_ip_range(start_ip, end_ip):
+    try:
+        start_octet = int(start_ip.split('.')[-1])
+        end_octet = int(end_ip.split('.')[-1])
+        return 0 <= start_octet <= 255 and 0 <= end_octet <= 255 and is_valid_ip(start_ip) and is_valid_ip(end_ip)
+    except (ValueError, AttributeError):
+        return False
+
+# Main function
 def main(file_name):
-    wb = openpyxl.load_workbook(file_name) # Loadfile Excel
+    # Load Excel file
+    wb = openpyxl.load_workbook(file_name)
     ws = wb.active 
 
-    # รับค่า ssh_user และ ssh_password จากผู้ใช้
+    # Get SSH credentials from user
     ssh_user = input("Enter SSH Username: ")
     ssh_password = input("Enter SSH Password: ")
     ssh_port = 22
 
-    for row in ws.iter_rows(min_row=3):  # Skip Header Row
+    # Iterate through rows starting from the third row
+    for row in ws.iter_rows(min_row=3):
         if all(cell.value is None for cell in row):
-            print("Row is Null stop it")
+            print("Row is Null, stopping process.")
             break
 
-        # ตรวจสอบค่า IP range และพอร์ต
+        # Extract IP ranges and port
         source_start, source_end, dest_start, dest_end = row[1].value, row[2].value, row[4].value, row[5].value
-        try: # is port null use 80
+
+        # Validate IP address ranges
+        if not (is_valid_ip_range(source_start, source_end) and is_valid_ip_range(dest_start, dest_end)):
+            row[10].value = "Please provide valid IP addresses"
+            continue  # Skip to next row if IP addresses are invalid
+
+        try:  # Use port 80 if port is null
             port = int(row[7].value) if row[7].value else 80
         except ValueError:
             row[10].value = "Invalid Port"
-            continue
+            continue  # Skip to next row if port is invalid
 
         all_success = True
+        source_network = source_start.rsplit('.', 1)[0]
         for source_ip in range(int(source_start.split('.')[-1]), int(source_end.split('.')[-1]) + 1):
-            source_ip_full = source_start.rsplit('.', 1)[0] + '.' + str(source_ip)
+            source_ip_full = f"{source_network}.{source_ip}"
 
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -50,22 +77,23 @@ def main(file_name):
                 print(f"An error occurred when connecting to {source_ip_full}: {e}")
                 row[10].value = "SSH Failed"
                 all_success = False
-                break
+                break  # Skip to next row if SSH connection fails
 
-            # แกะค่า Destinations ip start กับ end ออกมา
+            # Iterate through destination IPs
+            dest_network = dest_start.rsplit('.', 1)[0]
             for dest_ip in range(int(dest_start.split('.')[-1]), int(dest_end.split('.')[-1]) + 1):
-                dest_ip_full = dest_start.rsplit('.', 1)[0] + '.' + str(dest_ip)
+                dest_ip_full = f"{dest_network}.{dest_ip}"
                 print(f"Testing telnet from {source_ip_full} to {dest_ip_full}:{port}")
-                result = test_telnet_via_ssh(ssh_client, dest_ip_full, port) #เริ่ม telnet ผ่าน SSH
+                result = test_telnet_via_ssh(ssh_client, dest_ip_full, port)  # Start telnet via SSH
                 print(f"Testing telnet result: {result}")
                 if result == "Failed":
-                    all_success = False #ถ้ามี failed 1 ตัว ก็ false หมดเลย
+                    all_success = False  # If any test fails, mark as false
 
             ssh_client.close()
 
         row[10].value = "Success" if all_success else "Failed"
 
-    # บันทึกผลลัพธ์ลงไฟล์ Excel
+    # Save the workbook with results
     try:
         wb.save(file_name)
     except PermissionError as e:
