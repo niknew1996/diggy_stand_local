@@ -1,6 +1,7 @@
 import paramiko
 import openpyxl
 import ipaddress
+import getpass
 
 # Function to test telnet connection via SSH
 def test_telnet_through_ssh(ssh_client, dest_ip, port, timeout=5):
@@ -45,8 +46,8 @@ def main(file_name):
 
     # Get SSH credentials from user
     ssh_user = input("Enter SSH Username: ")
-    ssh_password = input("Enter SSH Password: ")
-    ssh_port = 22
+    ssh_password = getpass.getpass("Enter SSH Password: ")  # Hide password input
+    ssh_port = input("Enter SSH Port: ")
 
     # Iterate through rows starting from the third row
     for row in ws.iter_rows(min_row=3):
