@@ -3,17 +3,22 @@ import openpyxl
 import ipaddress
 
 # Function to test telnet connection via SSH
-def test_telnet_via_ssh(ssh_client, dest_ip, port, timeout=5):
+def test_telnet_through_ssh(ssh_client, dest_ip, port, timeout=5):
     try:
-        stdin, stdout, stderr = ssh_client.exec_command(f"telnet {dest_ip} {port}", timeout=timeout)
-        stdout.channel.settimeout(timeout)
-        if "Connected" in stdout.read().decode():
-            return "Success"
+        command = f"echo quit | telnet {dest_ip} {port}"
+        stdin, stdout, stderr = ssh_client.exec_command(command, timeout=timeout)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        if "Connected" in output or "Escape character is" in output:
+            result = f"Telnet to {dest_ip}:{port} successful"
         else:
-            return "Failed"
+            result = f"Telnet to {dest_ip}:{port} failed: {error or output}"
+        print(result)  # Print the result
+        return result
     except Exception as e:
-        print(f"An error occurred during telnet: {e}")
-        return "Failed"
+        result = f"Telnet to {dest_ip}:{port} failed: {e}"
+        print(result)  # Print the result
+        return result
 
 # Function to validate IP addresses
 def is_valid_ip(ip):
@@ -84,9 +89,9 @@ def main(file_name):
             for dest_ip in range(int(dest_start.split('.')[-1]), int(dest_end.split('.')[-1]) + 1):
                 dest_ip_full = f"{dest_network}.{dest_ip}"
                 print(f"Testing telnet from {source_ip_full} to {dest_ip_full}:{port}")
-                result = test_telnet_via_ssh(ssh_client, dest_ip_full, port)  # Start telnet via SSH
+                result = test_telnet_through_ssh(ssh_client, dest_ip_full, port)  # Start telnet via SSH
                 print(f"Testing telnet result: {result}")
-                if result == "Failed":
+                if "failed" in result:
                     all_success = False  # If any test fails, mark as false
 
             ssh_client.close()
